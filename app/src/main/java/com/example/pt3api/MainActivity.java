@@ -14,6 +14,7 @@ import android.location.Address;
 import android.location.Geocoder;
 import android.location.Location;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.animation.Animation;
@@ -22,6 +23,7 @@ import android.widget.EditText;
 import android.widget.LinearLayout;
 import android.widget.Toast;
 
+import com.google.android.gms.location.FusedLocationProviderClient;
 import com.google.android.gms.location.LocationServices;
 import com.google.android.gms.maps.CameraUpdate;
 import com.google.android.gms.maps.CameraUpdateFactory;
@@ -44,25 +46,32 @@ import java.util.List;
 
 public class MainActivity extends FragmentActivity implements OnMapReadyCallback, GoogleMap.OnMapClickListener, GoogleMap.OnMapLongClickListener {
 
-    FloatingActionButton mAddAlarmFab, mAddPersonFab;
-    ExtendedFloatingActionButton mAddFab;
-    ExtendedFloatingActionButton yourLocation;
-    String apiKey = getResources().getString(R.string.google_maps_key);
-    Boolean isAllFabsVisible;
-    String lt, lg;
+    private static final String TAG = MainActivity.class.getSimpleName();
+    private static final float DEFAULT_ZOOM = 15.0f; // Adjust the zoom level as needed
+    private static final LatLng defaultLocation = new LatLng(41.12, 1.243988); // Set a default location
+
+    private FloatingActionButton mAddAlarmFab, mAddPersonFab;
+    private ExtendedFloatingActionButton mAddFab;
+    private FloatingActionButton yourLocation;
+    private String apiKey;
+    private Boolean isAllFabsVisible;
+    private FusedLocationProviderClient fusedLocationProviderClient;
     private GoogleMap mapa;
     private final int PERMISO_LOCALIZACION = 1;
+    private Location lastKnownLocation;
+    private boolean locationPermissionGranted = true;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        // Places.initialize(getApplicationContext(), apiKey );
-        // PlacesClient placesClient = Places.createClient(this);
+        apiKey = getResources().getString(R.string.google_maps_key);
 
-        // Construct a FusedLocationProviderClient.
-        // fusedLocationProviderClient = LocationServices.getFusedLocationProviderClient(this);
+        Places.initialize(getApplicationContext(), apiKey );
+        PlacesClient placesClient = Places.createClient(this);
+
+        fusedLocationProviderClient = LocationServices.getFusedLocationProviderClient(this);
 
         SupportMapFragment mapFragment =
                 (SupportMapFragment) getSupportFragmentManager().findFragmentById(R.id.map);
@@ -107,6 +116,13 @@ public class MainActivity extends FragmentActivity implements OnMapReadyCallback
                                 }
                             });
 
+                            yourLocation.setOnClickListener(new View.OnClickListener() {
+                                @Override
+                                public void onClick(View view) {
+                                    getDeviceLocation();
+                                }
+                            });
+
                             mAddFab.extend();
 
                             isAllFabsVisible = true;
@@ -124,7 +140,7 @@ public class MainActivity extends FragmentActivity implements OnMapReadyCallback
                 });
     }
 
-    /*private void getDeviceLocation() {
+    private void getDeviceLocation() {
         try {
             if (locationPermissionGranted) {
                 Task<Location> locationResult = fusedLocationProviderClient.getLastLocation();
@@ -135,16 +151,16 @@ public class MainActivity extends FragmentActivity implements OnMapReadyCallback
                             // Set the map's camera position to the current location of the device.
                             lastKnownLocation = task.getResult();
                             if (lastKnownLocation != null) {
-                                map.moveCamera(CameraUpdateFactory.newLatLngZoom(
+                                mapa.moveCamera(CameraUpdateFactory.newLatLngZoom(
                                         new LatLng(lastKnownLocation.getLatitude(),
                                                 lastKnownLocation.getLongitude()), DEFAULT_ZOOM));
                             }
                         } else {
                             Log.d(TAG, "Current location is null. Using defaults.");
                             Log.e(TAG, "Exception: %s", task.getException());
-                            map.moveCamera(CameraUpdateFactory
+                            mapa.moveCamera(CameraUpdateFactory
                                     .newLatLngZoom(defaultLocation, DEFAULT_ZOOM));
-                            map.getUiSettings().setMyLocationButtonEnabled(false);
+                            mapa.getUiSettings().setMyLocationButtonEnabled(false);
                         }
                     }
                 });
@@ -152,7 +168,7 @@ public class MainActivity extends FragmentActivity implements OnMapReadyCallback
         } catch (SecurityException e)  {
             Log.e("Exception: %s", e.getMessage(), e);
         }
-    }*/
+    }
 
     public void moveMapCamera(LatLng newLatLng) {
         if (mapa != null) {
